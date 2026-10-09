@@ -2,3 +2,5 @@
 * text=auto eol=lf
 *.png binary
 *.pdf binary
+# third-party data is kept byte-identical to the published file
+data/raw_sintef/*.csv -text
