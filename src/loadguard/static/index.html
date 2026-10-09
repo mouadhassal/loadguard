@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoadGuard site</title>
+<style>
+  :root { --bg:#f7f8fa; --card:#fff; --ink:#1b1f24; --muted:#5b6470; --line:#dfe3e8; --accent:#0a7d5a; --warn:#b3261e; }
+  body { margin:0; font:14px/1.45 system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  main { max-width:900px; margin:0 auto; padding:16px; }
+  h1 { font-size:20px; margin:4px 0 12px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; flex:1 1 180px; }
+  .big { font-size:24px; font-weight:600; }
+  .muted { color:var(--muted); font-size:12px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--line); border-radius:8px; margin-top:12px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+  button { font:inherit; padding:4px 10px; border-radius:6px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .over { color:var(--warn); }
+  input { font:inherit; width:80px; padding:3px 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>LoadGuard: building charging site</h1>
+  <div class="row">
+    <div class="card"><div class="muted">Site load</div><div class="big" data-testid="site-kw">–</div></div>
+    <div class="card"><div class="muted">Panel cap (kW)</div><div class="big" data-testid="cap-kw">–</div>
+      <form data-testid="cap-form"><input data-testid="cap-input" type="number" step="0.1" min="0">
+        <button class="primary" data-testid="cap-apply">Apply</button></form></div>
+    <div class="card"><div class="muted">Policy</div><div class="big" data-testid="policy">–</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Station</th><th>Link</th><th>Status</th><th>Limit kW</th><th>Power kW</th><th>Session kWh</th><th></th></tr></thead>
+    <tbody data-testid="stations"></tbody>
+  </table>
+</main>
+<script>
+const fmt = (x) => Number(x).toFixed(2);
+async function refresh() {
+  const s = await (await fetch('/api/state')).json();
+  const site = document.querySelector('[data-testid=site-kw]');
+  site.textContent = fmt(s.site_kw) + ' kW';
+  site.classList.toggle('over', s.site_kw > s.cap_kw + 1e-6);
+  document.querySelector('[data-testid=cap-kw]').textContent = fmt(s.cap_kw);
+  document.querySelector('[data-testid=policy]').textContent = s.policy;
+  document.querySelector('[data-testid=stations]').innerHTML = s.stations.map(st => `
+    <tr data-testid="station-${st.id}">
+      <td>${st.id}</td><td>${st.connected ? 'online' : 'offline'}</td>
+      <td data-testid="status-${st.id}">${st.status}</td>
+      <td data-testid="limit-${st.id}">${fmt(st.limit_kw)}</td>
+      <td data-testid="power-${st.id}">${fmt(st.power_kw)}</td>
+      <td>${fmt(st.kwh)}</td>
+      <td>${st.tx ? `<button data-testid="stop-${st.id}" onclick="act('${st.id}','stop')">Stop</button>`
+                  : `<button class="primary" data-testid="start-${st.id}" onclick="act('${st.id}','start')">Start</button>`}</td>
+    </tr>`).join('');
+}
+async function act(id, what) { await fetch(`/api/stations/${id}/${what}`, {method:'POST'}); refresh(); }
+document.querySelector('[data-testid=cap-form]').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const v = parseFloat(document.querySelector('[data-testid=cap-input]').value);
+  if (!isNaN(v)) await fetch('/api/cap', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({cap_kw:v})});
+  refresh();
+});
+refresh(); setInterval(refresh, 250);
+</script>
+</body>
+</html>

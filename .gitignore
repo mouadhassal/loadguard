@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.hypothesis/
+*.pyc
+*.db
+# private: company brief, emails and the proposal are not for the public repo
+00_BRIEF.md
+outreach/
+proposal/

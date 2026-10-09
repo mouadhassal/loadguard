@@ -1,0 +1,4 @@
+# LF everywhere so the SHA-256 of PREREGISTRATION.md is identical on every machine.
+* text=auto eol=lf
+*.png binary
+*.pdf binary
